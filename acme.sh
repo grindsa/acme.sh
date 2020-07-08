@@ -43,6 +43,7 @@ _OLD_STAGE_CA_HOST="https://acme-staging.api.letsencrypt.org"
 VTYPE_HTTP="http-01"
 VTYPE_DNS="dns-01"
 VTYPE_ALPN="tls-alpn-01"
+VTYPE_TKAUTH="tkauth-01"
 
 LOCAL_ANY_ADDRESS="0.0.0.0"
 
@@ -188,28 +189,28 @@ _dlg_versions() {
   if _exists "${ACME_OPENSSL_BIN:-openssl}"; then
     ${ACME_OPENSSL_BIN:-openssl} version 2>&1
   else
-    echo "$ACME_OPENSSL_BIN doesn't exist."
+    echo "$ACME_OPENSSL_BIN doesn't exists."
   fi
 
   echo "apache:"
   if [ "$_APACHECTL" ] && _exists "$_APACHECTL"; then
     $_APACHECTL -V 2>&1
   else
-    echo "apache doesn't exist."
+    echo "apache doesn't exists."
   fi
 
   echo "nginx:"
   if _exists "nginx"; then
     nginx -V 2>&1
   else
-    echo "nginx doesn't exist."
+    echo "nginx doesn't exists."
   fi
 
   echo "socat:"
   if _exists "socat"; then
     socat -V 2>&1
   else
-    _debug "socat doesn't exist."
+    _debug "socat doesn't exists."
   fi
 }
 
@@ -1185,6 +1186,14 @@ _createcsr() {
 
   _csr_cn="$(_idn "$domain")"
   _debug2 _csr_cn "$_csr_cn"
+
+  if [ -n "$_tnauth" ]; then
+    _tn_identifier=$(_tnauth_gen)
+    echo _tn_identifier
+  elif [ -n "$_tnauthb64" ]; then
+    _tn_identifier=$_tnauthb64
+  fi
+
   if _contains "$(uname -a)" "MINGW"; then
     ${ACME_OPENSSL_BIN:-openssl} req -new -sha256 -key "$csrkey" -subj "//CN=$_csr_cn" -config "$csrconf" -out "$csr"
   else
@@ -1744,33 +1753,36 @@ _post() {
     if [ "$httpmethod" = "HEAD" ]; then
       _CURL="$_CURL -I  "
     fi
+    if [ "$_additional_header" ]; then
+       _H6="$_additional_header"
+    fi
     _debug "_CURL" "$_CURL"
     if [ "$needbase64" ]; then
       if [ "$body" ]; then
         if [ "$_postContentType" ]; then
-          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "Content-Type: $_postContentType" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" --data "$body" "$_post_url" | _base64)"
+          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "Content-Type: $_postContentType" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" -H "$_H6" --data "$body" "$_post_url" | _base64)"
         else
-          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" --data "$body" "$_post_url" | _base64)"
+          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" -H "$_H6" --data "$body" "$_post_url" | _base64)"
         fi
       else
         if [ "$_postContentType" ]; then
-          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "Content-Type: $_postContentType" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" "$_post_url" | _base64)"
+          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "Content-Type: $_postContentType" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" -H "$_H6" "$_post_url" | _base64)"
         else
-          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" "$_post_url" | _base64)"
+          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" -H "$_H6" "$_post_url" | _base64)"
         fi
       fi
     else
       if [ "$body" ]; then
         if [ "$_postContentType" ]; then
-          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "Content-Type: $_postContentType" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" --data "$body" "$_post_url")"
+          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "Content-Type: $_postContentType" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" -H "$_H6" --data "$body" "$_post_url")"
         else
-          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" --data "$body" "$_post_url")"
+          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" -H "$_H6" --data "$body" "$_post_url")"
         fi
       else
         if [ "$_postContentType" ]; then
-          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "Content-Type: $_postContentType" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" "$_post_url")"
+          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "Content-Type: $_postContentType" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" -H "$_H6" "$_post_url")"
         else
-          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" "$_post_url")"
+          response="$($_CURL --user-agent "$USER_AGENT" -X $httpmethod -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" -H "$_H6" "$_post_url")"
         fi
       fi
     fi
@@ -1863,11 +1875,15 @@ _get() {
     if [ "$t" ]; then
       _CURL="$_CURL --connect-timeout $t"
     fi
+    if [ "$_additional_header" ]; then
+      # _CURL="$_CURL -H \"$_additional_header\""
+      _H6="$_additional_header"
+    fi
     _debug "_CURL" "$_CURL"
     if [ "$onlyheader" ]; then
-      $_CURL -I --user-agent "$USER_AGENT" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" "$url"
+      $_CURL -I --user-agent "$USER_AGENT" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" -H "$_H6" "$url"
     else
-      $_CURL --user-agent "$USER_AGENT" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" "$url"
+      $_CURL --user-agent "$USER_AGENT" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" -H "$_H6" "$url"
     fi
     ret=$?
     if [ "$ret" != "0" ]; then
@@ -2801,10 +2817,10 @@ _setApache() {
 
   apacheVer="$($_APACHECTL -V | grep "Server version:" | cut -d : -f 2 | cut -d " " -f 2 | cut -d '/' -f 2)"
   _debug "apacheVer" "$apacheVer"
-  apacheMajor="$(echo "$apacheVer" | cut -d . -f 1)"
+  apacheMajer="$(echo "$apacheVer" | cut -d . -f 1)"
   apacheMinor="$(echo "$apacheVer" | cut -d . -f 2)"
 
-  if [ "$apacheVer" ] && [ "$apacheMajor$apacheMinor" -ge "24" ]; then
+  if [ "$apacheVer" ] && [ "$apacheMajer$apacheMinor" -ge "24" ]; then
     echo "
 Alias /.well-known/acme-challenge  $ACME_DIR
 
@@ -3202,6 +3218,7 @@ _on_before_issue() {
   _debug _on_before_issue
   _debug _chk_main_domain "$_chk_main_domain"
   _debug _chk_alt_domains "$_chk_alt_domains"
+
   #run pre hook
   if [ "$_chk_pre_hook" ]; then
     _info "Run pre hook:'$_chk_pre_hook'"
@@ -3220,6 +3237,37 @@ _on_before_issue() {
     fi
   fi
 
+  # get spc token if inserted
+  if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
+    if [ -n "$_tnauth" ]; then
+      if [ -z "$_spctoken" ]; then
+        if [ -n "$_pa_hook" ]; then
+          _tn_identifier=$(_tnauth_gen $_tnauth)
+          # query spc token and cdp from policy adminstrator
+          _pa_response=$(eval "$LE_CONFIG_HOME/pa/$_pa_hook" $_tnauth $_tn_identifier $ACCOUNT_KEY_PATH ${ACME_OPENSSL_BIN:-openssl})
+          _debug _pa_response "$_pa_response"
+          export _spctoken=$(echo "$_pa_response" | awk '{print $1}')
+          _debug _spctoken: "$_spctoken"
+          export PA_CDP=$(echo "$_pa_response" | awk '{print $2}')
+          _debug PA_CDP: "$PA_CDP"
+          if [ -z "$_spctoken" ]; then
+            _err "Error when run pa hook $LE_CONFIG_HOME/pa/$_pa_hook."
+            return 1
+          fi
+        else
+          _info "--pa-hook parameter is missing."
+        fi
+      fi
+    else
+      # tnauthb64 has been specified... we need a spc 
+      _tn_identifier=$_tnauthb64
+      if [ -z "$_spctoken" ]; then
+        _err "--tnauthb64 requires --spctoken option."
+        return 1
+      fi
+    fi
+  fi
+  
   _debug Le_LocalAddress "$_chk_local_addr"
 
   _index=1
@@ -3679,10 +3727,19 @@ __trigger_validation() {
   _debug2 _t_key_authz "$_t_key_authz"
   _t_vtype="$3"
   _debug2 _t_vtype "$_t_vtype"
+
   if [ "$ACME_VERSION" = "2" ]; then
-    _send_signed_request "$_t_url" "{}"
+    if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
+      _send_signed_request "$_t_url" "{\"atc\": \"$_spctoken\"}"
+    else
+      _send_signed_request "$_t_url" "{}"
+    fi
   else
-    _send_signed_request "$_t_url" "{\"resource\": \"challenge\", \"type\": \"$_t_vtype\", \"keyAuthorization\": \"$_t_key_authz\"}"
+    if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
+      _send_signed_request "$_t_url" "{\"resource\": \"challenge\", \"atc\": \"$_spctoken\"}"
+    else
+      _send_signed_request "$_t_url" "{\"resource\": \"challenge\", \"type\": \"$_t_vtype\", \"keyAuthorization\": \"$_t_key_authz\"}"
+  fi
   fi
 }
 
@@ -4011,12 +4068,27 @@ issue() {
         fi
         _identifiers="$_identifiers,{\"type\":\"dns\",\"value\":\"$(_idn "$d")\"}"
       done
-      _debug2 _identifiers "$_identifiers"
-      if ! _send_signed_request "$ACME_NEW_ORDER" "{\"identifiers\": [$_identifiers]}"; then
-        _err "Create new order error."
-        _clearup
-        _on_issue_err "$_post_hook"
-        return 1
+      # replace identifier with tnauth
+      if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
+        _debug "_tnauth or _tnauthb64 set. Overwriting identifier."
+        _identifiers="{\"type\":\"TNAuthList\",\"value\":\"$_tn_identifier\"}"
+        _not_before=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        _not_after=$(date --date='tomorrow' -u +"%Y-%m-%dT%H:%M:%SZ")
+        _debug2 _identifiers "$_identifiers"
+        if ! _send_signed_request "$ACME_NEW_ORDER" "{\"identifiers\": [$_identifiers], \"notBefore\": \"$_not_before\",\"notAfter\": \"$_not_after\"}"; then
+          _err "Create new order error."
+          _clearup
+          _on_issue_err "$_post_hook"
+          return 1
+        fi
+      else
+        _debug2 _identifiers "$_identifiers"
+        if ! _send_signed_request "$ACME_NEW_ORDER" "{\"identifiers\": [$_identifiers]}"; then
+          _err "Create new order error."
+          _clearup
+          _on_issue_err "$_post_hook"
+          return 1
+        fi
       fi
       Le_LinkOrder="$(echo "$responseHeaders" | grep -i '^Location.*$' | _tail_n 1 | tr -d "\r\n " | cut -d ":" -f 2-)"
       _debug Le_LinkOrder "$Le_LinkOrder"
@@ -4096,6 +4168,10 @@ $_authorizations_map"
         vtype="$VTYPE_ALPN"
       fi
 
+      if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
+        vtype="$VTYPE_TKAUTH"
+      fi
+
       if [ "$ACME_VERSION" = "2" ]; then
         _idn_d="$(_idn "$d")"
         _candindates="$(echo "$_authorizations_map" | grep -i "^$_idn_d,")"
@@ -4109,6 +4185,11 @@ $_authorizations_map"
           done
         fi
         response="$(echo "$_candindates" | sed "s/$_idn_d,//")"
+        if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
+          if [ -z "$response" ]; then
+            response="$(echo "$_authorizations_map" | grep "^$_tn_identifier," | sed "s/$_tn_identifier,//")"
+          fi
+        fi
         _debug2 "response" "$response"
         if [ -z "$response" ]; then
           _err "get to authz error."
@@ -4466,7 +4547,11 @@ $_authorizations_map"
       sleep 2
       _debug "checking"
       if [ "$ACME_VERSION" = "2" ]; then
-        _send_signed_request "$uri"
+        if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
+          _send_signed_request "$uri" "{\"atc\": \"$_spctoken\"}"
+        else
+          _send_signed_request "$uri"
+        fi
       else
         response="$(_get "$uri")"
       fi
@@ -5519,7 +5604,7 @@ revoke() {
       fi
     fi
   else
-    _info "Domain key file doesn't exist."
+    _info "Domain key file doesn't exists."
   fi
 
   _info "Try account key."
@@ -6253,6 +6338,10 @@ Parameters:
   --log    [/path/to/logfile]       Specifies the log file. The default is: \"$DEFAULT_LOG_FILE\" if you don't give a file path here.
   --log-level 1|2                   Specifies the log level, default is 1.
   --syslog [0|3|6|7]                Syslog level, 0: disable syslog, 3: error, 6: info, 7: debug.
+  --tnauth TNAuthList               TNAuthList identifier
+  --tnauthb64 TNAuthList            Base64 encoded TNAuthList identifier
+  --spctoken spc-token              Service Provider Code Token
+
 
   These parameters are to install the cert to nginx/apache or any other server after issue/renew a cert:
 
@@ -6966,6 +7055,26 @@ _process() {
         fi
         shift
         ;;
+      --tnauth )
+        _tnauth="$2"
+        shift
+        ;;
+      --tnauthb64 )
+        _tnauthb64="$2"
+        shift
+        ;;
+      --spctoken )
+        _spctoken="$2"
+        shift
+        ;;
+      --pa-hook )
+        _pa_hook="$2"
+        shift
+        ;;
+      --additional-header )
+        _additional_header="$2"
+        shift        
+        ;;
       *)
         _err "Unknown parameter : $1"
         return 1
@@ -7136,6 +7245,35 @@ _process() {
     _processAccountConf
   fi
 
+}
+
+_tnauth_gen() {
+    _add_to_csr="$1"
+    _debug2 "_tnauth_gen()"
+    _debug2 "create $DOMAIN_PATH/tnauth.conf"
+    cat > "$DOMAIN_PATH/tnauthlist.conf"<< EOF
+asn1=SEQUENCE:tn_auth_list
+[tn_auth_list]
+field1=EXP:0,IA5:$_tnauth
+EOF
+    _debug2 "convert to DER"
+    ${ACME_OPENSSL_BIN:-openssl} asn1parse -genconf "$DOMAIN_PATH/tnauthlist.conf" -out "$DOMAIN_PATH/tnauthlist.der" > /dev/null 2>/dev/null
+
+    if [ -z "$_add_to_csr" ]; then
+      _debug2 "add TNAuthList extension to $csrconf"
+      echo "" >> "$csrconf"
+      od -An -t x1 -w "$DOMAIN_PATH/tnauthlist.der" | sed -e 's/ /:/g' -e 's/^/1.3.6.1.5.5.7.1.26=DER/' >> "$csrconf"
+      
+      # add pa cdp
+      if [ "$PA_CDP" ]; then
+        echo "" >> "$csrconf"
+        echo "crlDistributionPoints=URI:$PA_CDP" >> "$csrconf"
+      fi      
+    fi
+
+    _b64auth=$(cat "$DOMAIN_PATH/tnauthlist.der" | _base64)
+    _debug2 base64auth "$_b64auth"
+    echo "$_b64auth"
 }
 
 if [ "$INSTALLONLINE" ]; then
