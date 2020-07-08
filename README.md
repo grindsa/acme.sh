@@ -1,3 +1,6 @@
+# This is a fork with experimental support of [TNAuthList identifer](https://tools.ietf.org/html/draft-ietf-acme-authority-token-tnauthlist-05) and [tkauth-01 challenge](https://tools.ietf.org/html/draft-ietf-acme-authority-token-04). Use at your own risk! 
+[Further documentation](tnauth.md)
+
 # An ACME Shell script: acme.sh [![Build Status](https://travis-ci.org/acmesh-official/acme.sh.svg?branch=master)](https://travis-ci.org/acmesh-official/acme.sh)
 
 <a href="https://opencollective.com/acmesh" alt="Financial Contributors on Open Collective"><img src="https://opencollective.com/acmesh/all/badge.svg?label=financial+contributors" /></a> [![Join the chat at https://gitter.im/acme-sh/Lobby](https://badges.gitter.im/acme-sh/Lobby.svg)](https://gitter.im/acme-sh/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
