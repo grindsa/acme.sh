@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-VER=2.8.9
+VER=2.9.0
 
 PROJECT_NAME="acme.sh"
 
@@ -3626,6 +3626,7 @@ _regAccount() {
           _err "Can not get EAB credentials from ZeroSSL."
           return 1
         fi
+        _debug2 "$_eabresp"
         _eab_id="$(echo "$_eabresp" | tr ',}' '\n' | grep '"eab_kid"' | cut -d : -f 2 | tr -d '"')"
         if [ -z "$_eab_id" ]; then
           _err "Can not resolve _eab_id"
@@ -4866,15 +4867,8 @@ $_authorizations_map"
       _debug2 response "$response"
 
       status=$(echo "$response" | _egrep_o '"status":"[^"]*' | cut -d : -f 2 | tr -d '"')
-      if _contains "$status" "valid"; then
-        _info "$(__green Success)"
-        _stopserver "$serverproc"
-        serverproc=""
-        _clearupwebbroot "$_currentRoot" "$removelevel" "$token"
-        break
-      fi
 
-      if [ "$status" = "invalid" ]; then
+      if _contains "$status" "invalid"; then
         error="$(echo "$response" | _egrep_o '"error":\{[^\}]*')"
         _debug2 error "$error"
         errordetail="$(echo "$error" | _egrep_o '"detail": *"[^"]*' | cut -d '"' -f 4)"
@@ -4894,6 +4888,14 @@ $_authorizations_map"
         _clearup
         _on_issue_err "$_post_hook" "$vlist"
         return 1
+      fi
+
+      if _contains "$status" "valid"; then
+        _info "$(__green Success)"
+        _stopserver "$serverproc"
+        serverproc=""
+        _clearupwebbroot "$_currentRoot" "$removelevel" "$token"
+        break
       fi
 
       if [ "$status" = "pending" ]; then
