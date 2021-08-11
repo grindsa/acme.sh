@@ -2986,10 +2986,10 @@ _setApache() {
 
   apacheVer="$($_APACHECTL -V | grep "Server version:" | cut -d : -f 2 | cut -d " " -f 2 | cut -d '/' -f 2)"
   _debug "apacheVer" "$apacheVer"
-  apacheMajer="$(echo "$apacheVer" | cut -d . -f 1)"
+  apacheMajor="$(echo "$apacheVer" | cut -d . -f 1)"
   apacheMinor="$(echo "$apacheVer" | cut -d . -f 2)"
 
-  if [ "$apacheVer" ] && [ "$apacheMajer$apacheMinor" -ge "24" ]; then
+  if [ "$apacheVer" ] && [ "$apacheMajor$apacheMinor" -ge "24" ]; then
     echo "
 Alias /.well-known/acme-challenge  $ACME_DIR
 
@@ -3392,7 +3392,6 @@ _on_before_issue() {
   _debug _on_before_issue
   _debug _chk_main_domain "$_chk_main_domain"
   _debug _chk_alt_domains "$_chk_alt_domains"
-
   #run pre hook
   if [ "$_chk_pre_hook" ]; then
     _info "Run pre hook:'$_chk_pre_hook'"
@@ -3956,6 +3955,7 @@ if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
 else
   _send_signed_request "$_t_url" "{}"
 fi
+}
 
 #endpoint  domain type
 _ns_lookup_impl() {
@@ -4401,7 +4401,7 @@ issue() {
         _on_issue_err "$_post_hook"
         return 1
       fi
-    else:
+    else
       _debug2 _identifiers "$_identifiers"
       if ! _send_signed_request "$ACME_NEW_ORDER" "{\"identifiers\": [$_identifiers]}"; then
         _err "Create new order error."
