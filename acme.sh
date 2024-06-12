@@ -4733,8 +4733,7 @@ issue() {
         _d="*.$_d"
       fi
       _debug2 _d "$_d"
-      _authorizations_map="$_d,$response#$_authz_url
-$_authorizations_map"
+      _authorizations_map="$_d,$response#$_authz_url $_authorizations_map"
     done
 
     _debug2 _authorizations_map "$_authorizations_map"
@@ -4945,8 +4944,7 @@ $_authorizations_map"
           _clearup
           return 1
         fi
-        dns_entries="$dns_entries$dns_entry
-"
+        dns_entries="$dns_entries$dns_entry"
         _debug2 "$dns_entries"
         dnsadded='1'
       fi
