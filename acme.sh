@@ -4622,6 +4622,7 @@ issue() {
         _on_issue_err "$_post_hook"
         return 1
       fi
+    fi
     _debug2 _identifiers "$_identifiers"
     _notBefore=""
     _notAfter=""
