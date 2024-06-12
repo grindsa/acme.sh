@@ -4046,6 +4046,11 @@ __get_domain_new_authz() {
     return 1
   fi
 
+  if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
+    _send_signed_request "$_t_url" "{\"atc\": \"$_spctoken\"}"
+  else
+    _send_signed_request "$_t_url" "{}"
+  fi
 }
 
 #uri keyAuthorization
@@ -4057,12 +4062,6 @@ __trigger_validation() {
   _debug2 _t_key_authz "$_t_key_authz"
   _t_vtype="$3"
   _debug2 _t_vtype "$_t_vtype"
-
-if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
-  _send_signed_request "$_t_url" "{\"atc\": \"$_spctoken\"}"
-else
-  _send_signed_request "$_t_url" "{}"
-fi
 }
 
 #endpoint  domain type
