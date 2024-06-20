@@ -229,28 +229,28 @@ _dlg_versions() {
   if _exists "${ACME_OPENSSL_BIN:-openssl}"; then
     ${ACME_OPENSSL_BIN:-openssl} version 2>&1
   else
-    echo "$ACME_OPENSSL_BIN doesn't exists."
+    echo "$ACME_OPENSSL_BIN doesn't exist."
   fi
 
   echo "apache:"
   if [ "$_APACHECTL" ] && _exists "$_APACHECTL"; then
     $_APACHECTL -V 2>&1
   else
-    echo "apache doesn't exists."
+    echo "apache doesn't exist."
   fi
 
   echo "nginx:"
   if _exists "nginx"; then
     nginx -V 2>&1
   else
-    echo "nginx doesn't exists."
+    echo "nginx doesn't exist."
   fi
 
   echo "socat:"
   if _exists "socat"; then
     socat -V 2>&1
   else
-    _debug "socat doesn't exists."
+    _debug "socat doesn't exist."
   fi
 }
 
@@ -1285,14 +1285,13 @@ _createcsr() {
 
   _csr_cn="$(_idn "$domain")"
   _debug2 _csr_cn "$_csr_cn"
-
+  
   if [ -n "$_tnauth" ]; then
     _tn_identifier=$(_tnauth_gen)
-    echo _tn_identifier
   elif [ -n "$_tnauthb64" ]; then
     _tn_identifier=$_tnauthb64
-  fi
-
+  fi  
+  
   if _contains "$(uname -a)" "MINGW"; then
     if _isIP "$_csr_cn"; then
       ${ACME_OPENSSL_BIN:-openssl} req -new -sha256 -key "$csrkey" -subj "//O=$PROJECT_NAME" -config "$csrconf" -out "$csr"
@@ -1939,9 +1938,11 @@ _post() {
     if [ "$httpmethod" = "HEAD" ]; then
       _CURL="$_CURL -I  "
     fi
+    
     if [ "$_additional_header" ]; then
        _H6="$_additional_header"
-    fi
+    fi    
+        
     _debug "_CURL" "$_CURL"
     if [ "$needbase64" ]; then
       if [ "$body" ]; then
@@ -2070,7 +2071,7 @@ _get() {
     if [ "$_additional_header" ]; then
       # _CURL="$_CURL -H \"$_additional_header\""
       _H6="$_additional_header"
-    fi
+    fi    
     _debug "_CURL" "$_CURL"
     if [ "$onlyheader" ]; then
       $_CURL -I --user-agent "$USER_AGENT" -H "$_H1" -H "$_H2" -H "$_H3" -H "$_H4" -H "$_H5" -H "$_H6" "$url"
@@ -4046,11 +4047,6 @@ __get_domain_new_authz() {
     return 1
   fi
 
-  if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
-    _send_signed_request "$_t_url" "{\"atc\": \"$_spctoken\"}"
-  else
-    _send_signed_request "$_t_url" "{}"
-  fi
 }
 
 #uri keyAuthorization
@@ -4062,6 +4058,13 @@ __trigger_validation() {
   _debug2 _t_key_authz "$_t_key_authz"
   _t_vtype="$3"
   _debug2 _t_vtype "$_t_vtype"
+
+  if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
+    _send_signed_request "$_t_url" "{\"atc\": \"$_spctoken\"}"
+  else
+    _send_signed_request "$_t_url" "{}"
+  fi
+
 }
 
 #endpoint  domain type
@@ -4600,32 +4603,19 @@ issue() {
         break
       fi
       _identifiers="$_identifiers,{\"type\":\"$(_getIdType "$d")\",\"value\":\"$(_idn "$d")\"}"
-    done
-    # replace identifier with tnauth
+    done   
+    
     if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
       _debug "_tnauth or _tnauthb64 set. Overwriting identifier."
       _identifiers="{\"type\":\"TNAuthList\",\"value\":\"$_tn_identifier\"}"
       _not_before=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-      _not_after=$(date --date='tomorrow' -u +"%Y-%m-%dT%H:%M:%SZ")
-      _debug2 _identifiers "$_identifiers"
-      if ! _send_signed_request "$ACME_NEW_ORDER" "{\"identifiers\": [$_identifiers], \"notBefore\": \"$_not_before\",\"notAfter\": \"$_not_after\"}"; then
-        _err "Create new order error."
-        _clearup
-        _on_issue_err "$_post_hook"
-        return 1
-      fi
+      _not_after=$(date --date='tomorrow' -u +"%Y-%m-%dT%H:%M:%SZ")  
+      _debug2 _identifiers "$_identifiers"      
     else
       _debug2 _identifiers "$_identifiers"
-      if ! _send_signed_request "$ACME_NEW_ORDER" "{\"identifiers\": [$_identifiers]}"; then
-        _err "Create new order error."
-        _clearup
-        _on_issue_err "$_post_hook"
-        return 1
-      fi
+      _notBefore=""
+      _notAfter=""
     fi
-    _debug2 _identifiers "$_identifiers"
-    _notBefore=""
-    _notAfter=""
 
     if [ "$_valid_from" ]; then
       _savedomainconf "Le_Valid_From" "$_valid_from"
@@ -4733,7 +4723,8 @@ issue() {
         _d="*.$_d"
       fi
       _debug2 _d "$_d"
-      _authorizations_map="$_d,$response#$_authz_url $_authorizations_map"
+      _authorizations_map="$_d,$response#$_authz_url
+$_authorizations_map"
     done
 
     _debug2 _authorizations_map "$_authorizations_map"
@@ -4787,7 +4778,7 @@ issue() {
         if [ -z "$response" ]; then
           response="$(echo "$_authorizations_map" | grep "^$_tn_identifier," | sed "s/$_tn_identifier,//")"
         fi
-      fi
+      fi      
       _debug2 "response" "$response"
       if [ -z "$response" ]; then
         _err "get to authz error."
@@ -4944,7 +4935,8 @@ issue() {
           _clearup
           return 1
         fi
-        dns_entries="$dns_entries$dns_entry"
+        dns_entries="$dns_entries$dns_entry
+"
         _debug2 "$dns_entries"
         dnsadded='1'
       fi
@@ -5172,6 +5164,8 @@ issue() {
       _sleep 2
       _debug "checking"
 
+      _send_signed_request "$_authz_url"
+
       if [ "$?" != "0" ]; then
         _err "Invalid code, $d:Verify error:$response"
         _clearupwebbroot "$_currentRoot" "$removelevel" "$token"
@@ -5179,14 +5173,6 @@ issue() {
         _on_issue_err "$_post_hook" "$vlist"
         return 1
       fi
-
-      if [ -n "$_tnauth" ] || [ -n "$_tnauthb64" ]; then
-        _send_signed_request "$uri" "{\"atc\": \"$_spctoken\"}"
-      else
-        _send_signed_request "$uri"
-      fi
-      _send_signed_request "$_authz_url"
-
     done
 
   done
@@ -6286,7 +6272,7 @@ revoke() {
       fi
     fi
   else
-    _info "Domain key file doesn't exists."
+    _info "Domain key file doesn't exist."
   fi
   return 1
 }
@@ -6346,6 +6332,7 @@ _deactivate() {
   fi
 
   _identifiers="{\"type\":\"$(_getIdType "$_d_domain")\",\"value\":\"$_d_domain\"}"
+
   if ! _send_signed_request "$ACME_NEW_ORDER" "{\"identifiers\": [$_identifiers]}"; then
     _err "Can not get domain new order."
     return 1
@@ -7910,7 +7897,7 @@ _process() {
     --eab-hmac-key)
       _eab_hmac_key="$2"
       shift
-      ;;
+      ;;    
     --preferred-chain)
       _preferred_chain="$2"
       shift
@@ -7933,8 +7920,8 @@ _process() {
       ;;
     --additional-header )
       _additional_header="$2"
-      shift
-      ;;
+      shift        
+      ;;       
     *)
       _err "Unknown parameter : $1"
       return 1
@@ -8150,11 +8137,6 @@ EOF
     echo "$_b64auth"
 }
 
-if [ "$INSTALLONLINE" ]; then
-  INSTALLONLINE=""
-  _installOnline
-  exit
-fi
 
 main() {
   [ -z "$1" ] && showhelp && return
